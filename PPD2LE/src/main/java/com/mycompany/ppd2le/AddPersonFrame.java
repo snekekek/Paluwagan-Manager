@@ -200,6 +200,7 @@ public class AddPersonFrame extends javax.swing.JFrame {
 
             // Create a new Borrower with initial values for totalContributed (0.0) and hasReceivedPayout (false)
             Borrower b = new Borrower(fullName, phoneNumber, emailAddress, regularContribution);
+            b.setHasPaidCurrentMonthContribution(true);
             MainFrame.PArray.addBorrower(b);
 
             if (mainFrameRef != null) {

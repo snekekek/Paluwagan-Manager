@@ -6,9 +6,12 @@ package com.mycompany.ppd2le;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
+import java.awt.Color;
+import java.awt.Component;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import javax.swing.JOptionPane;
+import javax.swing.JTable;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -32,22 +35,41 @@ public class MainFrame extends javax.swing.JFrame {
     }
     
     public void refreshTable() {
-    // Updated columns to reflect paluwagan context
-        String columns[] = {"Name", "Contribution per Cycle", "Total Contributed", "Payout Status"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0);
+        String columns[] = {"Name", "Contribution this Cycle", "Total Contributed", "Next Payout Date", "Paid Monthly Contribution"};
+        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+            
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 4; 
+            }
+        };
 
-        // Assuming PArray is a PersonList instance and contains Participant objects
-        if (MainFrame.PArray != null && MainFrame.PArray.listPersons() != null) { //
-            for (Person p : MainFrame.PArray.listPersons()) { //
-                // Check if the person is a Participant (formerly Borrower)
+        if (MainFrame.PArray != null && MainFrame.PArray.listPersons() != null) {
+            for (Person p : MainFrame.PArray.listPersons()) {
                 if (p instanceof Borrower) {
-                    Borrower participant = (Borrower) p; // Cast to Participant
+                    Borrower participant = (Borrower) p;
+                    
+                    System.out.println("refreshTable: Participant: " + participant.getName() + 
+                                       ", Next Due Date: " + participant.getNextContributionDueDate());
+
+                    String nextDueDateStatus;
+                    if (participant.getNextContributionDueDate() != null && 
+                        participant.getNextContributionDueDate().isEqual(LocalDate.MAX)) {
+                        nextDueDateStatus = "Paid Out (Current Cycle)"; 
+                    } else if (participant.getNextContributionDueDate() != null) {
+                        nextDueDateStatus = participant.getNextContributionDueDate().toString();
+                    } else {
+                        nextDueDateStatus = "N/A (No due date)"; 
+                    }
+                    
+                    String paidStatus = participant.getHasPaidCurrentMonthContribution() ? "PAID" : "NOT PAID"; // Determine paid status
 
                     Object[] rowData = {
-                        participant.getName(), //
-                        String.format("₱%.2f", participant.getRegularContributionAmount()), // Format as currency
-                        String.format("₱%.2f", participant.getTotalContributed()), // Format as currency
-                        participant.hasReceivedPayout() ? "Received" : "Pending" // Display Payout Status
+                        participant.getName(),
+                        String.format("₱%.2f", participant.getRegularContributionAmount()),
+                        String.format("₱%.2f", participant.getTotalContributed()),
+                        nextDueDateStatus,
+                        paidStatus 
                     };
                     model.addRow(rowData);
                 }
@@ -55,71 +77,133 @@ public class MainFrame extends javax.swing.JFrame {
 
             jTable1.setModel(model);
 
-            // Center renderers for numeric/status columns
-            DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer(); //
-            centerRenderer.setHorizontalAlignment(SwingConstants.CENTER); //
+            DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+            centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
 
-            // I Center column 2,3,4
-            jTable1.getColumnModel().getColumn(1).setCellRenderer(centerRenderer); // Contribution per Cycle
-            jTable1.getColumnModel().getColumn(2).setCellRenderer(centerRenderer); // Total Contributed
-            jTable1.getColumnModel().getColumn(3).setCellRenderer(centerRenderer); // Payout Status
+            jTable1.getColumnModel().getColumn(1).setCellRenderer(centerRenderer);
+            jTable1.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
+            jTable1.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
+            jTable1.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                    String status = (String) value;
+                    if ("PAID".equals(status)) {
+                        c.setBackground(Color.GREEN);
+                        c.setForeground(Color.BLACK);
+                    } else {
+                        c.setBackground(Color.RED);
+                        c.setForeground(Color.WHITE); 
+                    }
+                    return c;
+                }
+            });
 
-            // Update the participant count
-            if (MainFrame.PArray.listBorrowers() == null || MainFrame.PArray.listBorrowers().isEmpty()) { //
-                participantField.setText("0"); //
+
+            if (MainFrame.PArray.listBorrowers() == null || MainFrame.PArray.listBorrowers().isEmpty()) {
+                participantField.setText("0");
             } else {
-
-                participantField.setText(String.valueOf(MainFrame.PArray.listBorrowers().size())); 
+                participantField.setText(String.valueOf(MainFrame.PArray.listBorrowers().size()));
             }
         }
-        
         updateNextRecipientDisplay();
     }
     
     private Borrower determineNextRecipient() {
         Borrower nextRecipient = null;
-        LocalDate earliestDueDate = null;
+        LocalDate earliestDueDate = LocalDate.MAX; 
+
+        System.out.println("\n--- Starting determineNextRecipient ---");
 
         if (MainFrame.PArray != null && MainFrame.PArray.listPersons() != null) {
             for (Person p : MainFrame.PArray.listPersons()) {
                 if (p instanceof Borrower) {
                     Borrower participant = (Borrower) p;
-                    // Only consider participants who haven't received a payout
-                    if (!participant.hasReceivedPayout()) { //
-                        if (nextRecipient == null) {
+                    
+                    System.out.println("    Checking participant: " + participant.getName() + 
+                                       ", Current Due Date: " + participant.getNextContributionDueDate());
+                    
+                    if (participant.getNextContributionDueDate() != null &&
+                        !participant.getNextContributionDueDate().isEqual(LocalDate.MAX)) { 
+                        
+                        System.out.println("        " + participant.getName() + " is eligible for current cycle consideration.");
+
+                        if (participant.getNextContributionDueDate().isBefore(earliestDueDate)) {
                             nextRecipient = participant;
-                            earliestDueDate = participant.getNextContributionDueDate(); //
-                        } else {
-                            // If comparing by due date:
-                            if (participant.getNextContributionDueDate() != null &&
-                                (earliestDueDate == null || participant.getNextContributionDueDate().isBefore(earliestDueDate))) { //
+                            earliestDueDate = participant.getNextContributionDueDate();
+                            System.out.println("        New earliest: " + nextRecipient.getName() + " on " + earliestDueDate);
+                        }
+                        else if (participant.getNextContributionDueDate().isEqual(earliestDueDate)) {
+                            if (nextRecipient != null && participant.getName().compareToIgnoreCase(nextRecipient.getName()) < 0) {
                                 nextRecipient = participant;
-                                earliestDueDate = participant.getNextContributionDueDate(); //
-                            }
-                            // Add a tie-breaker if due dates are the same (e.g., by name)
-                            else if (participant.getNextContributionDueDate() != null &&
-                                     earliestDueDate != null &&
-                                     participant.getNextContributionDueDate().isEqual(earliestDueDate)) { //
-                                // Example tie-breaker: alphabetical order
-                                if (participant.getName().compareToIgnoreCase(nextRecipient.getName()) < 0) {
-                                    nextRecipient = participant;
-                                }
+                                System.out.println("        Tie-breaker: " + nextRecipient.getName() + " chosen alphabetically.");
                             }
                         }
+                    } else {
+                        System.out.println("        " + participant.getName() + " is NOT eligible (due date null or MAX).");
                     }
                 }
             }
         }
+        System.out.println("--- End determineNextRecipient. Final nextRecipient: " + (nextRecipient != null ? nextRecipient.getName() : "N/A") + " ---");
         return nextRecipient;
     }
     
     private void updateNextRecipientDisplay() {
         Borrower nextRecipient = determineNextRecipient();
         if (nextRecipient != null) {
-            jLabel9.setText(nextRecipient.getName()); 
+            jLabel9.setText(nextRecipient.getName());
         } else {
-            jLabel9.setText("N/A (All received or no participants)");
+            jLabel9.setText("N/A (No eligible participants for this cycle)");
         }
+    }
+    
+    private void startNewCycle() {
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to start a new cycle?\n"
+            + "This will set due dates for each participant, starting 1 month from now and incrementing monthly.",
+            "Confirm New Cycle",
+            JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            System.out.println("\n--- Starting New Cycle ---");
+            
+            // Start the first participant's due date 1 month from today
+            LocalDate currentDueDate = LocalDate.now().plusMonths(1);
+
+            if (MainFrame.PArray != null && MainFrame.PArray.listPersons() != null) {
+                for (Person p : MainFrame.PArray.listPersons()) {
+                    if (p instanceof Borrower) {
+                        Borrower participant = (Borrower) p;
+
+
+                        participant.setNextContributionDueDate(currentDueDate); 
+                        participant.recordContribution(); 
+                        participant.setHasPaidCurrentMonthContribution(true); 
+
+                        // Increment for the next participant
+                        currentDueDate = currentDueDate.plusMonths(1);
+                        System.out.println("    Next participant's due date will be: " + currentDueDate);
+                    }
+                }
+            }
+            refreshTable(); 
+            JOptionPane.showMessageDialog(this, "New cycle started! Due dates assigned sequentially and contributions recorded.", "New Cycle", JOptionPane.INFORMATION_MESSAGE);
+            System.out.println("--- New Cycle Started ---");
+        }
+    }
+    
+    private double calculateTotalPooledAmount() {
+        double total = 0;
+        if (MainFrame.PArray != null && MainFrame.PArray.listPersons() != null) {
+            for (Person p : MainFrame.PArray.listPersons()) {
+                if (p instanceof Borrower) {
+                    Borrower participant = (Borrower) p;
+                    total += participant.getRegularContributionAmount();
+                }
+            }
+        }
+        return total;
     }
 
     /**
@@ -175,6 +259,8 @@ public class MainFrame extends javax.swing.JFrame {
         jMenu1 = new javax.swing.JMenu();
         jMenu5 = new javax.swing.JMenu();
         jMenu2 = new javax.swing.JMenu();
+        jMenu6 = new javax.swing.JMenu();
+        jMenuItem1 = new javax.swing.JMenuItem();
 
         jMenu3.setText("jMenu3");
 
@@ -195,23 +281,23 @@ public class MainFrame extends javax.swing.JFrame {
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null}
             },
             new String [] {
-                "Name", "Contribution per Cycle", "Total Contributed", "Payout Status"
+                "Name", "Contribution this Cycle", "Total Contributed", "Next Payout Date", "Paid Monthly Contribution"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, true
+                false, false, false, false, true
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -253,7 +339,7 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
 
-        jButton3.setText("Add Payment");
+        jButton3.setText("Add Contribution");
         jButton3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton3ActionPerformed(evt);
@@ -300,7 +386,6 @@ public class MainFrame extends javax.swing.JFrame {
         jLabel8.setText("₱0.0");
 
         jLabel9.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel9.setText("NAMEHERE");
 
         participantField.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         participantField.setText("0");
@@ -322,6 +407,18 @@ public class MainFrame extends javax.swing.JFrame {
 
         jMenu2.setText("Signout");
         jMenuBar1.add(jMenu2);
+
+        jMenu6.setText("Cycle");
+
+        jMenuItem1.setText("Start New Cycle");
+        jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem1ActionPerformed(evt);
+            }
+        });
+        jMenu6.add(jMenuItem1);
+
+        jMenuBar1.add(jMenu6);
 
         setJMenuBar(jMenuBar1);
 
@@ -361,14 +458,15 @@ public class MainFrame extends javax.swing.JFrame {
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jSeparator8, javax.swing.GroupLayout.PREFERRED_SIZE, 194, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(40, 40, 40)
+                                .addGap(37, 37, 37)
+                                .addComponent(jButton5))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                     .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addComponent(jButton2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(jButton3, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 114, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(37, 37, 37)
-                                .addComponent(jButton5))))
+                                    .addComponent(jButton3))
+                                .addGap(32, 32, 32))))
                     .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
@@ -420,7 +518,7 @@ public class MainFrame extends javax.swing.JFrame {
                                 .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(emailField, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(16, 16, 16)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(dueField, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(31, 31, 31)
@@ -503,8 +601,7 @@ public class MainFrame extends javax.swing.JFrame {
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         // TODO add your handling code here:
-        
-        int selectedRow = jTable1.getSelectedRow();
+         int selectedRow = jTable1.getSelectedRow();
 
         if (selectedRow >= 0) {
             DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
@@ -524,9 +621,8 @@ public class MainFrame extends javax.swing.JFrame {
             }
 
             if (retrievedBorrower != null) {
-                // Check if they are already "paid out" for the current cycle
                 if (retrievedBorrower.getNextContributionDueDate() != null &&
-                    retrievedBorrower.getNextContributionDueDate().isAfter(LocalDate.now().plusYears(50))) {
+                    retrievedBorrower.getNextContributionDueDate().isEqual(LocalDate.MAX)) { 
                     JOptionPane.showMessageDialog(this,
                             retrievedBorrower.getName() + " has already received an early payout for the current cycle.",
                             "Payout Status",
@@ -541,36 +637,43 @@ public class MainFrame extends javax.swing.JFrame {
                         JOptionPane.YES_NO_OPTION);
 
                 if (confirm == JOptionPane.YES_OPTION) {
-
+                    System.out.println("\n--- Payout Action for: " + retrievedBorrower.getName() + " ---");
+                    System.out.println("    Before Payout: " + retrievedBorrower.getName() + "'s Due Date: " + retrievedBorrower.getNextContributionDueDate());
+                    
                     retrievedBorrower.setNextContributionDueDate(LocalDate.MAX); 
-
-
+                    
+                    System.out.println("    After Payout: " + retrievedBorrower.getName() + "'s New Due Date: " + retrievedBorrower.getNextContributionDueDate());
 
                     refreshTable(); 
-                    
 
                     JOptionPane.showMessageDialog(this,
                             retrievedBorrower.getName() + " has received an early payout and is removed from the current cycle.",
                             "Early Payout Successful",
                             JOptionPane.INFORMATION_MESSAGE);
                 }
-            } 
-            
-                else {
-                    JOptionPane.showMessageDialog(this, "Error: Could not retrieve borrower details for " + selectedBorrowerName, "Error", JOptionPane.ERROR_MESSAGE);
-                }
-        } 
-        
-            else {
-                JOptionPane.showMessageDialog(this, "Please select a participant to give an early payout.", "Selection Error", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Error: Could not retrieve borrower details for " + selectedBorrowerName, "Error", JOptionPane.ERROR_MESSAGE);
             }
-        
+        } else {
+            JOptionPane.showMessageDialog(this, "Please select a participant to give an early payout.", "Selection Error", JOptionPane.WARNING_MESSAGE);
+        }
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
         // TODO add your handling code here:
-        
-        
+        int selectedRow = jTable1.getSelectedRow();
+            if (selectedRow != -1) {
+                String name = (String) jTable1.getValueAt(selectedRow, 0);
+                Borrower borrower = (Borrower) MainFrame.PArray.searchPerson(name);
+                if (borrower != null) {
+                    borrower.recordContribution();
+                    borrower.setHasPaidCurrentMonthContribution(true); // Mark as paid for current month
+                    JOptionPane.showMessageDialog(this, borrower.getName() + " has contributed ₱" + String.format("%.2f", borrower.getRegularContributionAmount()) + ".", "Contribution Added", JOptionPane.INFORMATION_MESSAGE);
+                    refreshTable();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Please select a borrower to add contribution.", "No Borrower Selected", JOptionPane.WARNING_MESSAGE);
+            }
     }//GEN-LAST:event_jButton3ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
@@ -639,6 +742,7 @@ public class MainFrame extends javax.swing.JFrame {
         // TODO add your handling code here:
         AddPersonFrame addPerson = new AddPersonFrame(this);
         addPerson.setVisible(true);
+        refreshTable();
         
     }//GEN-LAST:event_jButton8ActionPerformed
 
@@ -676,39 +780,19 @@ public class MainFrame extends javax.swing.JFrame {
                 nameField.setText(retrievedBorrower.getName());
                 numberField.setText(retrievedBorrower.getPhoneNumber());
                 emailField.setText(retrievedBorrower.getEmailAddress());
-
-                // --- For setting the due date: ---
-                // This depends on how you store/manage due dates for borrowers.
-                // 1. If Borrower has a 'dueDate' field (e.g., of type String or java.util.Date):
-                //    You would retrieve it and set it.
-                //    Example:
-                //    if (yourDueDateField != null) {
-                //        yourDueDateField.setText(retrievedBorrower.getDueDate().toString()); // Assuming getDueDate()
-                //    }
-
-                // 2. If you don't have a dueDate field on Borrower yet, you'd add one:
-                //    Example in Borrower.java: private java.time.LocalDate dueDate; // Or java.util.Date
-                //    Add getter/setter methods for it.
-
-                // 3. To set a *new* due date or open a dialog for it:
-                //    You could open a new dialog here, passing 'retrievedBorrower' to it
-                //    so the dialog can update the specific borrower's due date.
-                //    Example:
-                //    DueDateDialog dialog = new DueDateDialog(this, retrievedBorrower);
-                //    dialog.setVisible(true);
-
-                // For now, I'll print to console for demonstration purposes:
-                System.out.println("Selected Borrower Details:");
-                System.out.println("Name: " + retrievedBorrower.getName());
-                System.out.println("Email: " + retrievedBorrower.getEmailAddress());
-                System.out.println("Phone Number: " + retrievedBorrower.getPhoneNumber());
-                // System.out.println("Current Due Date: " + (retrievedBorrower.getDueDate() != null ? retrievedBorrower.getDueDate().toString() : "Not set"));
+                dueField.setText(String.valueOf(retrievedBorrower.getNextContributionDueDate()));
 
             } else {
                 System.out.println("Error: Could not retrieve borrower details for " + selectedBorrowerName);
             }
         }
     }//GEN-LAST:event_jTable1MouseClicked
+
+    private void jMenuItem1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem1ActionPerformed
+        // TODO add your handling code here:
+        startNewCycle();
+       jLabel8.setText("₱" + String.valueOf(calculateTotalPooledAmount()));
+    }//GEN-LAST:event_jMenuItem1ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -762,7 +846,9 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JMenu jMenu3;
     private javax.swing.JMenu jMenu4;
     private javax.swing.JMenu jMenu5;
+    private javax.swing.JMenu jMenu6;
     private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JScrollBar jScrollBar1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
