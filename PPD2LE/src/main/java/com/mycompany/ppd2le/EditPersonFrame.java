@@ -235,7 +235,8 @@ public class EditPersonFrame extends javax.swing.JFrame {
                 newRegularContribution,
                 newTotalContribution, 
                 originalBorrower.hasReceivedPayout(),
-                originalBorrower.getNextContributionDueDate()
+                originalBorrower.getNextContributionDueDate(),
+                originalBorrower.getHasPaidCurrentMonthContribution()
             );
 
             

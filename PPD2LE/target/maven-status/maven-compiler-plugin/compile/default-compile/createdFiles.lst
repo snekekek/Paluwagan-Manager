@@ -1,5 +1,6 @@
 com\mycompany\ppd2le\MainFrame$6.class
 com\mycompany\ppd2le\LogIn$3.class
+com\mycompany\ppd2le\MainFrame$11.class
 com\mycompany\ppd2le\SignUp.class
 com\mycompany\ppd2le\EditPersonFrame$8.class
 com\mycompany\ppd2le\MainFrame$4.class
@@ -16,6 +17,7 @@ com\mycompany\ppd2le\Borrower.class
 com\mycompany\ppd2le\EditPersonFrame.class
 com\mycompany\ppd2le\SignUp$3.class
 com\mycompany\ppd2le\MainFrame$5.class
+com\mycompany\ppd2le\MainFrame$13.class
 com\mycompany\ppd2le\EditPersonFrame$1.class
 com\mycompany\ppd2le\EditPersonFrame$4.class
 com\mycompany\ppd2le\PPD2LE.class
@@ -38,6 +40,7 @@ com\mycompany\ppd2le\SignUp$1.class
 com\mycompany\ppd2le\EditPersonFrame$2.class
 com\mycompany\ppd2le\LogIn$2.class
 com\mycompany\ppd2le\LogIn.class
+com\mycompany\ppd2le\MainFrame$12.class
 com\mycompany\ppd2le\EditPersonFrame$5.class
 com\mycompany\ppd2le\MainFrame$1.class
 com\mycompany\ppd2le\AddPersonFrame$4.class
