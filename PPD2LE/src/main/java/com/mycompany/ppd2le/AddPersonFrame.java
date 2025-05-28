@@ -10,19 +10,22 @@ import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 
 /**
- *
+ * The `AddPersonFrame` class is a JFrame (GUI window) that allows a user (lender)
+ * to add new borrower participants to the system. It collects details such as
+ * full name, phone number, email address, and a regular contribution amount.
  * @author Khloe
  */
 public class AddPersonFrame extends javax.swing.JFrame {
 
      private MainFrame mainFrameRef;
     /**
-     * Creates new form AddPersonFrame
+     * Creates new form AddPersonFrame.
      */
     public AddPersonFrame() {
         initComponents();
     }
     
+    // Creates a new AddPersonFrame with a reference to the MainFrame.
     public AddPersonFrame(MainFrame mainFrame) {
         this.mainFrameRef = mainFrame; 
         initComponents();
@@ -192,27 +195,46 @@ public class AddPersonFrame extends javax.swing.JFrame {
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         // TODO add your handling code here:
+        // Handles the action when the Save button (jButton1) is clicked.
+        // It gathers input, validates it, creates a new Borrower, and adds it to the lender's associated borrowers list.
+         String name = jTextField1.getText();
+        String phoneNumber = jTextField2.getText();
+        String emailAddress = jTextField3.getText();
+        String contributionText = jTextField4.getText();
+
+        if (name.isEmpty() || phoneNumber.isEmpty() || emailAddress.isEmpty() || contributionText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All fields must be filled out.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         try {
-            String fullName = jTextField1.getText();
-            String phoneNumber = jTextField2.getText();
-            String emailAddress = jTextField3.getText();
-            double regularContribution = Double.parseDouble(jTextField4.getText());
-
-            // Create a new Borrower with initial values for totalContributed (0.0) and hasReceivedPayout (false)
-            Borrower b = new Borrower(fullName, phoneNumber, emailAddress, regularContribution);
-            MainFrame.PArray.addBorrower(b);
-
-            if (mainFrameRef != null) {
-                mainFrameRef.refreshTable();
+            double regularContributionAmount = Double.parseDouble(contributionText);
+            if (regularContributionAmount <= 0) {
+                JOptionPane.showMessageDialog(this, "Contribution amount must be positive.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                return;
             }
 
-            this.dispose();
+            // Create new Borrower object
+            Borrower newBorrower = new Borrower(name, phoneNumber, emailAddress, regularContributionAmount);
 
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid number for Set Amount.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            // Add the new borrower to the current logged-in lender's associated borrowers list
+            // Use the public getter for currentLoggedInLender
+            if (mainFrameRef != null && mainFrameRef.getCurrentLoggedInLender() != null) { // Ensure currentLoggedInLender is accessible
+                mainFrameRef.getCurrentLoggedInLender().addAssociatedBorrower(newBorrower);
+                mainFrameRef.saveLenderBorrowers(); // This method is already public
+
+                // Refresh the table in MainFrame to display the new borrower
+                mainFrameRef.refreshTable();
+
+                JOptionPane.showMessageDialog(this, "Participant added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                this.dispose(); // Close the AddPersonFrame
+            } else {
+                JOptionPane.showMessageDialog(this, "MainFrame reference or current lender is null. Cannot add participant.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Invalid contribution amount. Please enter a valid number.", "Input Error", JOptionPane.ERROR_MESSAGE);
         }
-        
-
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed

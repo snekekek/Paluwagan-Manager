@@ -4,6 +4,8 @@
  */
 package com.mycompany.ppd2le;
 
+import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -13,10 +15,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import static java.util.Objects.hash;
 import javax.swing.JOptionPane;
+import javax.swing.UIManager;
 
 /**
  *
- * @author Franklin Xam
+ * @author Khloe
  */
 public class LogIn extends javax.swing.JFrame {
 
@@ -37,15 +40,13 @@ public class LogIn extends javax.swing.JFrame {
     private void initComponents() {
 
         jTextField1 = new javax.swing.JTextField();
-        jTextField2 = new javax.swing.JTextField();
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
+        jTextField2 = new javax.swing.JPasswordField();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
-        jTextField1.setText("jTextField1");
-
-        jTextField2.setText("jTextField2");
 
         jButton1.setText("Log In");
         jButton1.addActionListener(new java.awt.event.ActionListener() {
@@ -61,83 +62,129 @@ public class LogIn extends javax.swing.JFrame {
             }
         });
 
+        jTextField2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField2ActionPerformed(evt);
+            }
+        });
+
+        jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel1.setText("Username:");
+
+        jLabel2.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel2.setText("Password:");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap(82, Short.MAX_VALUE)
+                .addGap(23, 23, 23)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jLabel1)
+                            .addComponent(jLabel2))
+                        .addGap(18, 18, 18)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 239, Short.MAX_VALUE)
+                            .addComponent(jTextField2)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(59, 59, 59)
                         .addComponent(jButton1)
-                        .addGap(79, 79, 79)
-                        .addComponent(jButton2))
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 239, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 239, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(79, Short.MAX_VALUE))
+                        .addGap(53, 53, 53)
+                        .addComponent(jButton2)))
+                .addContainerGap(23, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(62, 62, 62)
-                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(23, 23, 23)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel1))
                 .addGap(33, 33, 33)
-                .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel2))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton1)
                     .addComponent(jButton2))
-                .addContainerGap(120, Short.MAX_VALUE))
+                .addContainerGap(23, Short.MAX_VALUE))
         );
 
         pack();
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-       try {
-            String a = jTextField1.getText();       
-            String b = jTextField2.getText();
-            boolean c = readFromFile(a, b);
-            if(c) {
-                JOptionPane.showMessageDialog(this, "Successful Login");
-                return;
+    // Handles the action when the Log In button (jButton1) is clicked.
+    // It validates username and password, hashes the entered password,
+    // and attempts to log in the lender.
+        
+    String username = jTextField1.getText();
+    String password = new String(jTextField2.getPassword());
+
+    if (username.isEmpty() || password.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Please enter both username and password.", "Login Error", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
+
+    
+
+    Lender foundLender = MainFrame.PArray.searchLenderByUsername(username);
+
+    if (foundLender != null) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedhash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : encodedhash) {
+                String hex = String.format("%02x", b);
+                hexString.append(hex);
             }
-            JOptionPane.showMessageDialog(this, "Unsuccessful Login");
-       } catch(Exception e) {
-           e.printStackTrace();
-       }
+            String hashedPassword = hexString.toString();
+            
+
+            if (foundLender.getPasswordHash().equals(hashedPassword)) {
+                JOptionPane.showMessageDialog(this, "Login Successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                MainFrame mainFrame = new MainFrame(foundLender);
+                mainFrame.setVisible(true);
+                this.dispose(); // Close login frame
+            } else {
+                JOptionPane.showMessageDialog(this, "Incorrect password.", "Login Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (NoSuchAlgorithmException e) {
+            JOptionPane.showMessageDialog(this, "Error during password hashing: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    } else {
+        JOptionPane.showMessageDialog(this, "Username not found.", "Login Error", JOptionPane.ERROR_MESSAGE);
+    }
        
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        // Handles the action when the Sign Up button (jButton2) is clicked.
+        // Disposes the current login frame and opens the SignUp frame.
         this.dispose();
         new SignUp().setVisible(true);
         
         // TODO add your handling code here:
     }//GEN-LAST:event_jButton2ActionPerformed
-    public boolean readFromFile(String userName, String password) throws FileNotFoundException, IOException, NoSuchAlgorithmException {
-        BufferedReader bf = new BufferedReader(new FileReader("password.csv"));
-        String n = "";
-        String compare = "";
-        String [] m = new String[0];
-        while((n = bf.readLine()) != null) {
-            m = n.split(",");
-            if(userName.equals(m[1])){
-                String snp = m[0] + password;
-                MessageDigest mg = MessageDigest.getInstance("SHA-256");
-                byte[] b = mg.digest(snp.getBytes(StandardCharsets.UTF_8));
-                compare = bytesToHex(b);
-                break;
-            } 
-        }
-        return compare.equals(m[2]);
-        
-    }
-    private String bytesToHex(byte[] hash) {
-        StringBuilder hexString = new StringBuilder(2 * hash.length);
-        for (int i = 0; i < hash.length; i++) {
-            String hex = Integer.toHexString(0xff & hash[i]);
+
+    private void jTextField2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField2ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextField2ActionPerformed
+    // Hashes a given password string using SHA-256 algorithm.
+    private String hashPassword(String password) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] encodedhash = digest.digest(
+                password.getBytes(StandardCharsets.UTF_8));
+        StringBuilder hexString = new StringBuilder(2 * encodedhash.length);
+        for (byte b : encodedhash) {
+            String hex = Integer.toHexString(0xff & b);
             if(hex.length() == 1) {
                 hexString.append('0');
             }
@@ -145,6 +192,7 @@ public class LogIn extends javax.swing.JFrame {
         }
         return hexString.toString();
     }
+    
     /**
      * @param args the command line arguments
      */
@@ -154,25 +202,18 @@ public class LogIn extends javax.swing.JFrame {
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
          * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
          */
+        FlatLightLaf.setup();
+
         try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(LogIn.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(LogIn.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(LogIn.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(LogIn.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            UIManager.setLookAndFeel(new FlatMacLightLaf());
+        } catch( Exception ex ) {
+            System.err.println( "Failed to initialize LaF" );
         }
         //</editor-fold>
         //</editor-fold>
-
+        
+        MainFrame.ReadFromFile(); 
+        
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -184,7 +225,9 @@ public class LogIn extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
     private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
+    private javax.swing.JPasswordField jTextField2;
     // End of variables declaration//GEN-END:variables
 }

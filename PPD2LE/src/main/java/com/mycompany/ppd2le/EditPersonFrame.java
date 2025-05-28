@@ -9,7 +9,10 @@ import com.formdev.flatlaf.themes.FlatMacLightLaf; // Assuming FlatLaf is used f
 import javax.swing.UIManager;
 
 /**
- *
+ * The `EditPersonFrame` class is a JFrame (GUI window) designed for
+ * editing the details of an existing borrower participant. It allows
+ * modification of full name, phone number, email address, regular
+ * contribution amount, and total contributed.
  * @author Khloe
  */
 public class EditPersonFrame extends javax.swing.JFrame {
@@ -19,12 +22,18 @@ public class EditPersonFrame extends javax.swing.JFrame {
     private String originalBorrowerName;
 
     /**
-     * Creates new form EditPersonFrame
+     * Creates new form EditPersonFrame.
      */
     public EditPersonFrame() {
         initComponents();
     }
     
+    /**
+     * Creates a new EditPersonFrame with a reference to the MainFrame
+     * and the Borrower object to be edited.
+     * @param mainFrame The reference to the MainFrame.
+     * @param borrowerToEdit The Borrower object whose details are to be edited.
+     */
     public EditPersonFrame(MainFrame mainFrame, Borrower borrowerToEdit) {
         this.mainFrameRef = mainFrame;
         this.originalBorrower = borrowerToEdit;
@@ -33,6 +42,10 @@ public class EditPersonFrame extends javax.swing.JFrame {
         populateFields(); 
     }
     
+    /**
+     * Populates the text fields in the form with the current details
+     * of the `originalBorrower` object.
+     */
     private void populateFields() {
         if (originalBorrower != null) {
             jTextField1.setText(originalBorrower.getName());
@@ -40,9 +53,7 @@ public class EditPersonFrame extends javax.swing.JFrame {
             jTextField3.setText(originalBorrower.getEmailAddress());
             jTextField4.setText(String.valueOf(originalBorrower.getRegularContributionAmount()));
             jTextField5.setText(String.valueOf(originalBorrower.getTotalContributed()));
-            // You might want to add fields for totalContributed and hasReceivedPayout
-            // or handle them in a separate "Add Payment" or "Mark Payout" function.
-            // For now, we'll only allow editing of basic info and regular contribution.
+            
         }
     }
 
@@ -214,56 +225,67 @@ public class EditPersonFrame extends javax.swing.JFrame {
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         // TODO add your handling code here:
+        // Handles the action when the Cancel button (jButton2) is clicked.
         this.dispose();
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         // TODO add your handling code here:
-         try {
-            String newFullName = jTextField1.getText();
-            String newPhoneNumber = jTextField2.getText();
-            String newEmailAddress = jTextField3.getText();
-            double newRegularContribution = Double.parseDouble(jTextField4.getText());
-            double newTotalContribution = Double.parseDouble(jTextField5.getText());
+        // Handles the action when the Save button (jButton1) is clicked.
+         String updatedName = jTextField1.getText();
+        String updatedPhoneNumber = jTextField2.getText();
+        String updatedEmailAddress = jTextField3.getText();
+        String updatedContributionText = jTextField4.getText();
 
-            // Create a new Borrower object with the updated details
-            // Keep totalContributed and hasReceivedPayout from the original borrower
-            Borrower updatedBorrower = new Borrower(
-                newFullName,
-                newPhoneNumber,
-                newEmailAddress,
-                newRegularContribution,
-                newTotalContribution, 
-                originalBorrower.hasReceivedPayout(),
-                originalBorrower.getNextContributionDueDate()
-            );
 
-            
-            boolean success = MainFrame.PArray.updateBorrower(originalBorrowerName, updatedBorrower);
+        if (updatedName.isEmpty() || updatedPhoneNumber.isEmpty() || updatedEmailAddress.isEmpty() || updatedContributionText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All fields must be filled out.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-            if (success) {
-                JOptionPane.showMessageDialog(this, "Participant details updated successfully!", "Update Success", JOptionPane.INFORMATION_MESSAGE);
-                if (mainFrameRef != null) {
-                    mainFrameRef.refreshTable(); 
-                }
-                this.dispose(); 
-            } 
-            
-            else {
-                JOptionPane.showMessageDialog(this, "Failed to update participant. Participant not found.", "Update Error", JOptionPane.ERROR_MESSAGE);
+        try {
+            double updatedRegularContributionAmount = Double.parseDouble(updatedContributionText);
+            if (updatedRegularContributionAmount <= 0) {
+                JOptionPane.showMessageDialog(this, "Contribution amount must be positive.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                return;
             }
 
-        } 
-        
-         catch (NumberFormatException ex) {
+            // --- Critical Null Checks ---
+            if (originalBorrower == null) {
+                JOptionPane.showMessageDialog(this, "Error: No participant selected for editing (originalBorrower is null).", "Internal Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (mainFrameRef == null) {
+                JOptionPane.showMessageDialog(this, "Error: MainFrame reference is missing.", "Internal Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            Lender currentLender = mainFrameRef.getCurrentLoggedInLender();
+            if (currentLender == null) {
+                JOptionPane.showMessageDialog(this, "Error: Current logged-in lender is null.", "Internal Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Update the properties of the originalBorrower object
+            originalBorrower.setName(updatedName);
+            originalBorrower.setPhoneNumber(updatedPhoneNumber);
+            originalBorrower.setEmailAddress(updatedEmailAddress);
+            originalBorrower.setRegularContributionAmount(updatedRegularContributionAmount);
+             originalBorrower.setTotalContributed(Double.parseDouble(jTextField5.getText()));
             
-             JOptionPane.showMessageDialog(this, "Please enter a valid number for Regular Contribution.", "Input Error", JOptionPane.ERROR_MESSAGE);
-        } 
-         
-         catch (Exception ex) {
-            
-             JOptionPane.showMessageDialog(this, "An unexpected error occurred: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+
+
+
+            mainFrameRef.saveLenderBorrowers(); // Save the updated list of borrowers
+            mainFrameRef.refreshTable();        // Refresh the table in MainFrame
+
+            JOptionPane.showMessageDialog(this, "Participant updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            this.dispose(); // Close the EditPersonFrame
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Invalid contribution amount. Please enter a valid number.", "Input Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "An unexpected error occurred during update: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace(); // 
         }
 
     }//GEN-LAST:event_jButton1ActionPerformed
