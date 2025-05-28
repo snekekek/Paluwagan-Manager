@@ -14,26 +14,29 @@ public class Borrower extends Person{
     private double regularContributionAmount; // The fixed amount contributed each cycle
     private double totalContributed;          // The sum of all contributions made by this participant
     private boolean hasReceivedPayout;        // True if this participant has already received the pot
-    private LocalDate nextContributionDueDate; // The date when the next contribution is due
+    private LocalDate nextContributionDueDate;
+    private boolean hasPaidCurrentMonthContribution;// The date when the next contribution is due
 
     // Constructor for creating a new participant with initial values
     public Borrower(String name, String phoneNumber, String emailAddress, double regularContributionAmount) {
         super(name, phoneNumber, emailAddress);
         this.regularContributionAmount = regularContributionAmount;
-        this.totalContributed = regularContributionAmount; // Starts at 0
+        this.totalContributed = 0;
         this.hasReceivedPayout = false; // Initially, no one has received
-        this.nextContributionDueDate = null; // Set this when the paluwagan starts or a cycle is defined
+        this.nextContributionDueDate = null;
+        this.hasPaidCurrentMonthContribution = true; 
     }
 
     // Constructor for loading existing participant data
     public Borrower(String name, String phoneNumber, String emailAddress,
                        double regularContributionAmount, double totalContributed,
-                       boolean hasReceivedPayout, LocalDate nextContributionDueDate) {
+                       boolean hasReceivedPayout, LocalDate nextContributionDueDate, boolean hasPaidCurrentMonthContribution) {
         super(name, phoneNumber, emailAddress);
         this.regularContributionAmount = regularContributionAmount;
         this.totalContributed = totalContributed;
         this.hasReceivedPayout = hasReceivedPayout;
         this.nextContributionDueDate = nextContributionDueDate;
+        this.hasPaidCurrentMonthContribution = hasPaidCurrentMonthContribution;
     }
 
     // --- Getters ---
@@ -52,6 +55,10 @@ public class Borrower extends Person{
     public LocalDate getNextContributionDueDate() {
         return nextContributionDueDate;
     }
+    
+    public boolean getHasPaidCurrentMonthContribution() {
+        return hasPaidCurrentMonthContribution;
+    }
 
     // --- Setters ---
     public void setRegularContributionAmount(double regularContributionAmount) {
@@ -65,7 +72,8 @@ public class Borrower extends Person{
     // Method to record a contribution
     public void recordContribution() {
         this.totalContributed += this.regularContributionAmount;
-        // Optionally, update the next due date here, or handle it externally
+        this.hasPaidCurrentMonthContribution = true;
+        
     }
 
     // Method to set that the participant has received their payout
@@ -75,6 +83,10 @@ public class Borrower extends Person{
 
     public void setNextContributionDueDate(LocalDate nextContributionDueDate) {
         this.nextContributionDueDate = nextContributionDueDate;
+    }
+    
+    public void setHasPaidCurrentMonthContribution(boolean hasPaidCurrentMonthContribution) {
+        this.hasPaidCurrentMonthContribution = hasPaidCurrentMonthContribution;
     }
 
     @Override
