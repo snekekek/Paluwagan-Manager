@@ -42,6 +42,21 @@ public class PersonList {
         }
         return null;
     }
+    
+    //Search in a list of borrower
+    public List<Borrower> searchBorrowers(String searchTerm) {
+        List<Borrower> results = new ArrayList<>();
+        String lowerSearchTerm = searchTerm.toLowerCase();
+        for (Person person : this.personList) {
+            if (person instanceof Borrower) {
+                Borrower borrower = (Borrower) person;
+                if (borrower.getName().toLowerCase().contains(lowerSearchTerm)) { // add paid status, contribution, email, phonenumber
+                    results.add(borrower);
+                }
+            }
+        }
+        return results;
+    }
 
     // Retrieve a Person from the list
         public Person retrievePerson(Person person) {
